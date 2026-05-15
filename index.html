@@ -29,10 +29,11 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .weather-icon{font-size:20px}.weather-temp{font-weight:700;font-size:16px}
 .weather-desc{color:var(--text2);font-size:11px;max-width:120px}
 .theme-toggle{background:none;border:none;font-size:16px;cursor:pointer;line-height:1;padding:4px;flex-shrink:0;margin-left:4px}
-.locate-btn{position:fixed;bottom:calc(55dvh + 16px);right:16px;z-index:999;width:44px;height:44px;border-radius:50%;background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.locate-btn{position:fixed;right:14px;z-index:999;width:42px;height:42px;border-radius:50%;background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .locate-btn:hover{color:var(--accent);border-color:var(--accent)}
 .locate-btn.active{color:#3b82f6;border-color:#3b82f6}
-@media(min-width:541px){.locate-btn{bottom:50%;right:16px}}
+@media(max-width:540px){.locate-btn{top:auto;bottom:calc(55dvh + 12px)}}
+@media(min-width:541px){.locate-btn{top:50%}}
 
 .panel{position:fixed;bottom:0;left:0;z-index:1000;background:var(--panel);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:24px 24px 0 0;width:420px;max-height:calc(100dvh - 60px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -4px 32px rgba(0,0,0,.15);transition:transform .35s cubic-bezier(.32,.72,0,1)}
 .panel.minimized{transform:translateY(calc(100% - 48px))}
@@ -775,8 +776,8 @@ document.getElementById('saveRouteBtn').onclick=()=>{
   document.getElementById('saveRouteBtn').textContent='Готово!';setTimeout(()=>document.getElementById('saveRouteBtn').textContent='Сохранить',1500);
 };
 
-document.getElementById('yandexBtn').onclick=()=>{if(lastGeneratedRoute)window.open(makeYandexUrl(lastGeneratedRoute),'_blank')};
-document.getElementById('twoGisBtn').onclick=()=>{if(lastGeneratedRoute)window.open(make2gisRouteUrl(lastGeneratedRoute),'_blank')};
+document.getElementById('yandexBtn').onclick=()=>{if(!lastGeneratedRoute)return;const pts=userLat!==null?[{lat:userLat,lng:userLng},...lastGeneratedRoute]:lastGeneratedRoute;window.open(makeYandexUrl(pts),'_blank')};
+document.getElementById('twoGisBtn').onclick=()=>{if(!lastGeneratedRoute)return;const pts=userLat!==null?[{lat:userLat,lng:userLng},...lastGeneratedRoute]:lastGeneratedRoute;window.open(make2gisRouteUrl(pts),'_blank')};
 
 document.getElementById('calendarBtn').onclick=()=>{
   if(!lastGeneratedRoute)return;
@@ -936,7 +937,16 @@ document.querySelectorAll('.tab-btn').forEach(btn=>btn.onclick=()=>{
 document.getElementById('timeSlider').oninput=e=>document.getElementById('timeVal').textContent=e.target.value;
 document.getElementById('distSlider').oninput=e=>document.getElementById('distVal').textContent=e.target.value;
 document.getElementById('toggleVisited').onclick=function(){this.classList.toggle('on');onlyUnvisited=this.classList.contains('on');renderPlaces()};
-document.getElementById('spinBtn').onclick=()=>{lastExcluded.clear();generateRoute(false)};
+document.getElementById('spinBtn').onclick=()=>{
+  lastExcluded.clear();
+  if(userLat!==null){generateRoute(false)}
+  else{
+    navigator.geolocation.getCurrentPosition(pos=>{
+      userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+      updateUserMarker();generateRoute(false);
+    },()=>generateRoute(false),{enableHighAccuracy:true,timeout:5000});
+  }
+};
 document.getElementById('reshuffleBtn').onclick=()=>generateRoute(true);
 document.getElementById('searchInput').oninput=e=>{searchQuery=e.target.value.toLowerCase();renderPlaces()};
 document.getElementById('routeDistFilter').querySelectorAll('.pill').forEach(b=>b.onclick=()=>{document.getElementById('routeDistFilter').querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));b.classList.add('active');routeDistMax=parseInt(b.dataset.max);renderRouteCards()});
