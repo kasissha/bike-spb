@@ -1,4 +1,4 @@
-const CACHE='velospb-v4';
+const CACHE='velospb-v5';
 const ASSETS=['./','/bike-spb/index.html','/bike-spb/manifest.json'];
 const TILE_CACHE='velospb-tiles';
 

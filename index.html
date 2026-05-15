@@ -1095,13 +1095,18 @@ function renderTripStats(){
 const mainPanel=document.getElementById('mainPanel');
 const panelHandle=document.getElementById('panelHandle');
 panelHandle.onclick=()=>mainPanel.classList.toggle('minimized');
-let panelTouchY=0;
-panelHandle.addEventListener('touchstart',e=>{panelTouchY=e.touches[0].clientY},{passive:true});
-panelHandle.addEventListener('touchend',e=>{
+let panelTouchY=0,panelTouchEl=null;
+function panelSwipeStart(e){panelTouchY=e.touches[0].clientY}
+function panelSwipeEnd(e){
   const dy=e.changedTouches[0].clientY-panelTouchY;
-  if(dy>30)mainPanel.classList.add('minimized');
-  else if(dy<-30)mainPanel.classList.remove('minimized');
-},{passive:true});
+  if(dy>40)mainPanel.classList.add('minimized');
+  else if(dy<-40)mainPanel.classList.remove('minimized');
+}
+// Swipe on handle, tabs, and top area of panel
+[panelHandle,document.querySelector('.panel-tabs')].forEach(el=>{
+  el.addEventListener('touchstart',panelSwipeStart,{passive:true});
+  el.addEventListener('touchend',panelSwipeEnd,{passive:true});
+});
 
 renderFilters();renderPlaces();renderRouteCards();renderSaved();renderStats();renderTripStats();loadWeather();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
