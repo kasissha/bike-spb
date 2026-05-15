@@ -705,6 +705,19 @@ function drawRoute(route){
   document.getElementById('rStops').textContent=route.length;
 
   const list=document.getElementById('routeStopsList');list.innerHTML='';
+  // Add user location as first stop
+  if(userLat!==null){
+    const userEl=document.createElement('div');userEl.className='route-stop';
+    const distToFirst=hav([userLat,userLng],[route[0].lat,route[0].lng]).toFixed(1);
+    userEl.innerHTML=`
+      <div class="stop-dot" style="background:#3b82f6"></div>
+      <div style="flex:1;min-width:0">
+        <div class="stop-name">Моё местоположение</div>
+        <div class="stop-sub">${distToFirst} км до первой точки</div>
+      </div>
+      <div class="stop-meta"><span>📍 старт</span></div>`;
+    list.appendChild(userEl);
+  }
   route.forEach((p,i)=>{
     const th=CULTURAL_CATS.has(p.cat)?'~3.5ч':p.cat==='food'?'~1ч':p.cat==='billiard'?'~2ч':'';
     const v=isVisited(p.name);const meta=[th,p.price,p.avg?'~'+p.avg:''].filter(Boolean).join(' · ');
@@ -1005,10 +1018,10 @@ function openCuratedDrawer(r,fromLat,fromLng){
   const timeH=(totalKm/15).toFixed(1);
   const dl={easy:'легко',medium:'средне',hard:'сложно'}[r.difficulty];
   let html=`<div class="saved-drawer-stats"><div class="saved-drawer-stat"><div class="stat-value">${Math.round(totalKm)}</div><div class="stat-label">км</div></div><div class="saved-drawer-stat"><div class="stat-value">${timeH}</div><div class="stat-label">часов</div></div><div class="saved-drawer-stat"><div class="stat-value">${dl}</div><div class="stat-label">сложность</div></div></div>`;
-  if(fromLat!=null&&userDistKm>=0.5){
-    html+=`<div style="font-size:11px;color:var(--accent);margin-bottom:4px">📍 ${userDistKm.toFixed(1)} км от вас до старта</div>`;
-  }
   html+=`<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:4px">${r.desc}</div>`;
+  if(fromLat!=null){
+    html+=`<div class="saved-drawer-stop"><div class="stop-num" style="background:#3b82f6">📍</div><div class="stop-info"><div class="stop-name">Моё местоположение</div><div class="stop-sub">${userDistKm.toFixed(1)} км до старта</div></div></div>`;
+  }
   r.waypoints.forEach((w,i)=>{
     const label=r.stops&&r.stops[i]?r.stops[i]:i===0?'Старт':i===r.waypoints.length-1?'Финиш':`Точка ${i+1}`;
     html+=`<div class="saved-drawer-stop"><div class="stop-num">${i+1}</div><div class="stop-info"><div class="stop-name">${label}</div></div></div>`;
