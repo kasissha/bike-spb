@@ -776,8 +776,24 @@ document.getElementById('saveRouteBtn').onclick=()=>{
   document.getElementById('saveRouteBtn').textContent='Готово!';setTimeout(()=>document.getElementById('saveRouteBtn').textContent='Сохранить',1500);
 };
 
-document.getElementById('yandexBtn').onclick=()=>{if(!lastGeneratedRoute)return;const pts=userLat!==null?[{lat:userLat,lng:userLng},...lastGeneratedRoute]:lastGeneratedRoute;window.open(makeYandexUrl(pts),'_blank')};
-document.getElementById('twoGisBtn').onclick=()=>{if(!lastGeneratedRoute)return;const pts=userLat!==null?[{lat:userLat,lng:userLng},...lastGeneratedRoute]:lastGeneratedRoute;window.open(make2gisRouteUrl(pts),'_blank')};
+document.getElementById('yandexBtn').onclick=()=>{
+  if(!lastGeneratedRoute)return;
+  const open=(lat,lng)=>{
+    const pts=lat!=null?[{lat,lng},...lastGeneratedRoute]:lastGeneratedRoute;
+    window.open(makeYandexUrl(pts),'_blank');
+  };
+  if(userLat!=null)open(userLat,userLng);
+  else navigator.geolocation.getCurrentPosition(p=>open(p.coords.latitude,p.coords.longitude),()=>open(null),{enableHighAccuracy:true,timeout:5000});
+};
+document.getElementById('twoGisBtn').onclick=()=>{
+  if(!lastGeneratedRoute)return;
+  const open=(lat,lng)=>{
+    const pts=lat!=null?[{lat,lng},...lastGeneratedRoute]:lastGeneratedRoute;
+    window.open(make2gisRouteUrl(pts),'_blank');
+  };
+  if(userLat!=null)open(userLat,userLng);
+  else navigator.geolocation.getCurrentPosition(p=>open(p.coords.latitude,p.coords.longitude),()=>open(null),{enableHighAccuracy:true,timeout:5000});
+};
 
 document.getElementById('calendarBtn').onclick=()=>{
   if(!lastGeneratedRoute)return;
@@ -1000,10 +1016,15 @@ function openCuratedDrawer(r,fromLat,fromLng){
   html+=`<div class="saved-drawer-actions"><button class="btn-sm" id="cdYandex">Яндекс Карты</button><button class="btn-sm" id="cd2gis">2ГИС</button><button class="btn-sm" id="cdCal">В календарь</button><button class="btn-sm" id="cdShare">Поделиться</button></div>`;
   document.getElementById('cdBody').innerHTML=html;
 
-  // Build navigation points including user location as start
-  const navPts=fromLat!=null?[{lat:fromLat,lng:fromLng},...r.waypoints.map(w=>({lat:w[0],lng:w[1]}))]:r.waypoints.map(w=>({lat:w[0],lng:w[1]}));
-  document.getElementById('cdYandex').onclick=()=>window.open(makeYandexUrl(navPts),'_blank');
-  document.getElementById('cd2gis').onclick=()=>window.open(make2gisRouteUrl(navPts),'_blank');
+  // Navigation buttons — always get fresh user location
+  const routeWpts=r.waypoints.map(w=>({lat:w[0],lng:w[1]}));
+  function navWithUser(cb){
+    const uLat=userLat,uLng=userLng;
+    const pts=uLat!=null?[{lat:uLat,lng:uLng},...routeWpts]:routeWpts;
+    cb(pts);
+  }
+  document.getElementById('cdYandex').onclick=()=>navWithUser(pts=>window.open(makeYandexUrl(pts),'_blank'));
+  document.getElementById('cd2gis').onclick=()=>navWithUser(pts=>window.open(make2gisRouteUrl(pts),'_blank'));
   document.getElementById('cdShare').onclick=()=>{
     const text='VeloSPb: '+r.title+'\n'+r.desc+'\n'+r.km+' км\n\nЯндекс Карты: '+makeYandexUrl(r.waypoints.map(w=>({lat:w[0],lng:w[1]})));
     if(navigator.share){navigator.share({title:r.title,text})}
