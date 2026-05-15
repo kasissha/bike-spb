@@ -1,5 +1,5 @@
 const CACHE='velospb-v1';
-const ASSETS=['/','/index.html','/manifest.json'];
+const ASSETS=['./','/bike-spb/index.html','/bike-spb/manifest.json'];
 const TILE_CACHE='velospb-tiles';
 
 self.addEventListener('install',e=>{

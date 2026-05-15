@@ -1029,7 +1029,7 @@ panelHandle.addEventListener('touchend',e=>{
 },{passive:true});
 
 renderFilters();renderPlaces();renderRouteCards();renderSaved();renderStats();renderTripStats();loadWeather();
-if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
 </body>
 </html>
