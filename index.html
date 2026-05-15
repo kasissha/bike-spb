@@ -888,13 +888,29 @@ function renderRouteCards(){
     else{routes.push({name:r.title,places:[],waypoints:r.waypoints,stops:r.stops,km:r.km,date:new Date().toLocaleDateString('ru-RU'),curated:true});btn.classList.add('saved')}
     saveSavedRoutes(routes);renderSaved();
   };
-  card.onclick=()=>{clearRoute();activeRouteId=r.id;activeCuratedRoute=r;document.querySelectorAll('.route-card').forEach(x=>x.classList.toggle('active',x.dataset.id===r.id));
-    const line=L.polyline(r.waypoints,{color:'#a78bfa',weight:4,opacity:.8}).addTo(map);routeLayers.push(line);
-    routeLayers.push(L.marker(r.waypoints[0],{icon:dIcon('<div class="route-marker-num">1</div>',24),zIndexOffset:1000}).bindPopup(`<div class="popup-name">Старт</div>`,{closeButton:false}).addTo(map));
-    routeLayers.push(L.marker(r.waypoints[r.waypoints.length-1],{icon:dIcon('<div class="route-marker-num" style="background:#34d399">F</div>',24),zIndexOffset:1000}).bindPopup(`<div class="popup-name">Финиш · ${r.km} км</div>`,{closeButton:false}).addTo(map));
-    r.waypoints.slice(1,-1).forEach(w=>routeLayers.push(L.marker(w,{icon:dIcon('<div class="waypoint-dot"></div>',6)}).addTo(map)));
-    map.fitBounds(line.getBounds(),{padding:[80,80],maxZoom:14});
-    openCuratedDrawer(r);
+  card.onclick=()=>{
+    clearRoute();activeRouteId=r.id;activeCuratedRoute=r;
+    document.querySelectorAll('.route-card').forEach(x=>x.classList.toggle('active',x.dataset.id===r.id));
+    const showRoute=(fromLat,fromLng)=>{
+      const allPts=fromLat!=null?[[fromLat,fromLng],...r.waypoints]:[...r.waypoints];
+      const line=L.polyline(allPts,{color:'#a78bfa',weight:4,opacity:.8}).addTo(map);routeLayers.push(line);
+      if(fromLat!=null){
+        routeLayers.push(L.circleMarker([fromLat,fromLng],{radius:8,fillColor:'#3b82f6',fillOpacity:1,color:'#fff',weight:3}).bindPopup('<div class="popup-name">Вы здесь</div>',{closeButton:false}).addTo(map));
+      }
+      routeLayers.push(L.marker(r.waypoints[0],{icon:dIcon('<div class="route-marker-num">1</div>',24),zIndexOffset:1000}).bindPopup(`<div class="popup-name">${r.stops?r.stops[0]:'Старт'}</div>`,{closeButton:false}).addTo(map));
+      routeLayers.push(L.marker(r.waypoints[r.waypoints.length-1],{icon:dIcon('<div class="route-marker-num" style="background:#34d399">F</div>',24),zIndexOffset:1000}).bindPopup(`<div class="popup-name">${r.stops?r.stops[r.stops.length-1]:'Финиш'}</div>`,{closeButton:false}).addTo(map));
+      r.waypoints.slice(1,-1).forEach(w=>routeLayers.push(L.marker(w,{icon:dIcon('<div class="waypoint-dot"></div>',6)}).addTo(map)));
+      map.fitBounds(line.getBounds(),{padding:[80,80],maxZoom:14});
+      openCuratedDrawer(r,fromLat,fromLng);
+    };
+    // Try to get user location, show route either way
+    if(userLat!=null){showRoute(userLat,userLng)}
+    else{
+      navigator.geolocation.getCurrentPosition(pos=>{
+        userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+        showRoute(userLat,userLng);
+      },()=>showRoute(null,null),{enableHighAccuracy:true,timeout:5000});
+    }
   };
   c.appendChild(card)});
 }
@@ -944,11 +960,21 @@ document.getElementById('apSave').onclick=()=>{
 };
 
 // ==================== CURATED ROUTE DRAWER ====================
-function openCuratedDrawer(r){
+function openCuratedDrawer(r,fromLat,fromLng){
   document.getElementById('cdTitle').textContent=r.title;
-  const timeH=(r.km/15).toFixed(1);
+  // Calculate total km including distance from user
+  let totalKm=r.km;
+  let userDistKm=0;
+  if(fromLat!=null){
+    userDistKm=hav([fromLat,fromLng],r.waypoints[0])*1.4;
+    totalKm=r.km+userDistKm;
+  }
+  const timeH=(totalKm/15).toFixed(1);
   const dl={easy:'легко',medium:'средне',hard:'сложно'}[r.difficulty];
-  let html=`<div class="saved-drawer-stats"><div class="saved-drawer-stat"><div class="stat-value">${r.km}</div><div class="stat-label">км</div></div><div class="saved-drawer-stat"><div class="stat-value">${timeH}</div><div class="stat-label">часов</div></div><div class="saved-drawer-stat"><div class="stat-value">${dl}</div><div class="stat-label">сложность</div></div></div>`;
+  let html=`<div class="saved-drawer-stats"><div class="saved-drawer-stat"><div class="stat-value">${Math.round(totalKm)}</div><div class="stat-label">км</div></div><div class="saved-drawer-stat"><div class="stat-value">${timeH}</div><div class="stat-label">часов</div></div><div class="saved-drawer-stat"><div class="stat-value">${dl}</div><div class="stat-label">сложность</div></div></div>`;
+  if(fromLat!=null&&userDistKm>=0.5){
+    html+=`<div style="font-size:11px;color:var(--accent);margin-bottom:4px">📍 ${userDistKm.toFixed(1)} км от вас до старта</div>`;
+  }
   html+=`<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:4px">${r.desc}</div>`;
   r.waypoints.forEach((w,i)=>{
     const label=r.stops&&r.stops[i]?r.stops[i]:i===0?'Старт':i===r.waypoints.length-1?'Финиш':`Точка ${i+1}`;
@@ -957,8 +983,10 @@ function openCuratedDrawer(r){
   html+=`<div class="saved-drawer-actions"><button class="btn-sm" id="cdYandex">Яндекс Карты</button><button class="btn-sm" id="cd2gis">2ГИС</button><button class="btn-sm" id="cdCal">В календарь</button><button class="btn-sm" id="cdShare">Поделиться</button></div>`;
   document.getElementById('cdBody').innerHTML=html;
 
-  document.getElementById('cdYandex').onclick=()=>{const pts=r.waypoints.map(w=>({lat:w[0],lng:w[1]}));window.open(makeYandexUrl(pts),'_blank')};
-  document.getElementById('cd2gis').onclick=()=>{const pts=r.waypoints.map(w=>({lat:w[0],lng:w[1]}));window.open(make2gisRouteUrl(pts),'_blank')};
+  // Build navigation points including user location as start
+  const navPts=fromLat!=null?[{lat:fromLat,lng:fromLng},...r.waypoints.map(w=>({lat:w[0],lng:w[1]}))]:r.waypoints.map(w=>({lat:w[0],lng:w[1]}));
+  document.getElementById('cdYandex').onclick=()=>window.open(makeYandexUrl(navPts),'_blank');
+  document.getElementById('cd2gis').onclick=()=>window.open(make2gisRouteUrl(navPts),'_blank');
   document.getElementById('cdShare').onclick=()=>{
     const text='VeloSPb: '+r.title+'\n'+r.desc+'\n'+r.km+' км\n\nЯндекс Карты: '+makeYandexUrl(r.waypoints.map(w=>({lat:w[0],lng:w[1]})));
     if(navigator.share){navigator.share({title:r.title,text})}
